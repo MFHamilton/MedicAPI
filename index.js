@@ -10,6 +10,8 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
+
+
 // Configuración de la conexión a SQL Server
 const sql = require('mssql');
 const dbConfig = {
@@ -672,3 +674,4 @@ app.post('/api/SetTipoMedicamentoEstado', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+
