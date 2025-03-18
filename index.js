@@ -426,6 +426,41 @@ app.post('/api/CreateUser', async (req, res) => {
     }
 });
 
+app.post('/api/Login', async (req, res) => {
+    const { correo, password } = req.body;
+
+    if (!correo || !password) {
+        return res.status(400).json({ error: "Correo y contraseña son obligatorios" });
+    }
+
+    try {
+        const pool = await sql.connect(dbConfig);
+
+        // Llamar al Stored Procedure para obtener la contraseña hasheada
+        const result = await pool.request()
+            .input('Correo', sql.NVarChar, correo)
+            .execute('sp_VALIDATEUSER');
+
+        if (result.recordset.length === 0) {
+            return res.status(401).json({ error: "Credenciales inválidas" });
+        }
+
+        const hashedPassword = result.recordset[0].HashedPassword;
+
+        // Comparar la contraseña ingresada con la hasheada
+        const isMatch = await bcrypt.compare(password, hashedPassword);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Credenciales inválidas" });
+        }
+
+        res.json({ message: "Login exitoso" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error en la autenticación" });
+    }
+});
+
 
 
 app.listen(PORT, () => {
