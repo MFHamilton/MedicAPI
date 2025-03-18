@@ -3,12 +3,16 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+
 
 const app = express();
 const PORT = 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
+
+
 
 // Configuración de la conexión a SQL Server
 const sql = require('mssql');
@@ -24,22 +28,30 @@ const dbConfig = {
 };
 
 // Obtener medicamentos con sus fases (GET)
-app.get('/api/MedEnsayo', async(req, res) => {
+app.get('/api/MedEnsayo/:nombreMedicamento', async (req, res) => {
     try {
+        // Obtiene el parámetro desde la URL
+        const { nombreMedicamento } = req.params;
+        console.log("Parámetro recibido:", nombreMedicamento);
+
         // Conexión a la base de datos
         const pool = await sql.connect(dbConfig);
-        // Ejecución de la consulta almacenada sp_obtener_listado_medicamentos en la base de datos
-        const result = await pool.request().execute('sp_GetEnsayosXMed');
-        // Envío de la respuesta en formato JSON
+
+        // Ejecución del procedimiento almacenado con el parámetro
+        const result = await pool.request()
+            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
+            .execute('sp_GetEnsayosXMed');
+
         res.json(result.recordset);
 
     } catch (err) {
-        // En caso de error, se envía un mensaje con el error
+        console.error("Error en el servidor:", err.message);
         res.status(500).send(err.message);
     }
 });
 
-// Obtener entidad reguladora (GET)
+
+// Obtener entidad reguladora (GET) 
 app.get('/api/EntidadReg', async(req, res) => {
     try{
         const pool = await sql.connect(dbConfig);
@@ -52,67 +64,82 @@ app.get('/api/EntidadReg', async(req, res) => {
 });
 
 // Obtener Evento Adversos por Medicamentos
-app.get('/api/EvenAdvMed', async(req, res) => {
-    try{
+app.get('/api/EvenAdvMed/:nombreMedicamento', async (req, res) => {
+    try {
+        const { nombreMedicamento } = req.params;
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetEvAdversXMed');
+        const result = await pool.request()
+            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
+            .execute('sp_GetEvAdversXMed');
         res.json(result.recordset);
-    } catch (err){
+    } catch (err) {
         res.status(500).send(err.message);
     }
 });
 
+
 // Obtener inspector por entidad reguladora
-app.get('/api/InspcEntd', async(res) => {
-    try{
+app.get('/api/InspcEntd/:nombreEntidad', async (req, res) => {
+    try {
+        const { nombreEntidad } = req.params;
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetInsXEntReguladora');
+        const result = await pool.request()
+            .input('nombreEntidad', sql.NVarChar(100), nombreEntidad)
+            .execute('sp_GetInsXEntReguladora');
         res.json(result.recordset);
-    } catch(err){
+    } catch (err) {
         res.status(500).send(err.message);
     }
-
 });
 
 // Obtener medicamentos por inspeccion
-app.get('/api/MedInsp', async(res) => {
-    try{
+app.get('/api/MedInsp/:nombreMedicamento', async (req, res) => {
+    try {
+        const { nombreMedicamento } = req.params;
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetInsXMed');
+        const result = await pool.request()
+            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
+            .execute('sp_GetInsXMed');
         res.json(result.recordset);
-
-    } catch(err){
+    } catch (err) {
         res.status(500).send(err.message);
     }
 });
 
 // Obtener medicamentos por lotes
-app.get('/api/LoteMed', async(res) => {
-    try{
+app.get('/api/LoteMed/:nombreMedicamento', async (req, res) => {
+    
+    try {
+        const { nombreMedicamento } = req.params;
         const pool = await sql.connect(dbConfig);
-        const  result = await pool.request().execute('sp_GetLotsXMed');
+        const result = await pool.request()
+            .input('nombreMedicamento', sql.NVarChar, nombreMedicamento)
+            .execute('sp_GetLotsXMed');
         res.json(result.recordset);
-    } catch (err){
+    } catch (err) {
         res.status(500).send(err.message);
     }
 });
 
-// Obtener medicacmentos
-app.get('/api/Meds', async(res) => {
-    try{
+// Obtener medicamentos
+app.get('/api/Meds', async (req, res) => {
+    try {
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().execute('sp_GetMed');
         res.json(result.recordset);
-    } catch (err){
+    } catch (err) {
         res.status(500).send(err.message);
     }
 });
 
 // Obtener proveedor de medicamentos
-app.get('/api/MedsProv', async(res) =>{
+app.get('/api/MedsProv/:nombreProveedor', async(req,res) =>{
     try{
+        const {nombreProveedor} = req.params;
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetMedXProv');
+        const result = await pool.request()
+        .input('nombreProveedor', sql.NVarChar, nombreProveedor)
+        .execute('sp_GetMedXProv');
         res.json(result.recordset);
     } catch(err){
         res.status(500).send(err.message);
@@ -120,7 +147,7 @@ app.get('/api/MedsProv', async(res) =>{
 });
 
 // Obtener listado de proveedores
-app.get('/api/Provd', async(res) =>{
+app.get('/api/Provd', async(req,res) =>{
     try{
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().execute('sp_GetProv');
@@ -393,6 +420,73 @@ app.post('/api/SetTipoMedicamentoEstado', async (req, res) => {
     }
 });
 
+
+
+app.post('/api/CreateUser', async (req, res) => {
+    const { correo, password } = req.body;
+
+    if (!correo || !password) {
+        return res.status(400).json({ error: "Correo y contraseña son obligatorios" });
+    }
+
+    try {
+        const pool = await sql.connect(dbConfig);
+
+        // Generar hash de la contraseña
+        SALT_ROUNDS = 10;
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        // Llamar al Stored Procedure
+        await pool.request()
+            .input('Correo', sql.NVarChar, correo)
+            .input('Password', sql.NVarChar, hashedPassword)
+            .execute('sp_CREATEUSER');
+
+        res.json({ message: "Usuario registrado exitosamente" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error registrando usuario" });
+    }
+});
+
+app.post('/api/Login', async (req, res) => {
+    const { correo, password } = req.body;
+
+    if (!correo || !password) {
+        return res.status(400).json({ error: "Correo y contraseña son obligatorios" });
+    }
+
+    try {
+        const pool = await sql.connect(dbConfig);
+
+        // Llamar al Stored Procedure para obtener la contraseña hasheada
+        const result = await pool.request()
+            .input('Correo', sql.NVarChar, correo)
+            .execute('sp_VALIDATEUSER');
+
+        if (result.recordset.length === 0) {
+            return res.status(401).json({ error: "Credenciales inválidas" });
+        }
+
+        const hashedPassword = result.recordset[0].HashedPassword;
+
+        // Comparar la contraseña ingresada con la hasheada
+        const isMatch = await bcrypt.compare(password, hashedPassword);
+
+        if (!isMatch) {
+            return res.status(401).json({ error: "Credenciales inválidas" });
+        }
+
+        res.json({ message: "Login exitoso" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error en la autenticación" });
+    }
+});
+
+
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+

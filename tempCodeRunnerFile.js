@@ -1,0 +1,1 @@
+api/LoteMed:nombreMedicamento
