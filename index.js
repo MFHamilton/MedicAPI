@@ -3,6 +3,8 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+
 
 const app = express();
 const PORT = 3000;
@@ -394,6 +396,37 @@ app.post('/api/SetTipoMedicamentoEstado', async (req, res) => {
         res.status(500).send(err.message);
     }
 });
+
+
+
+app.post('/api/CreateUser', async (req, res) => {
+    const { correo, password } = req.body;
+
+    if (!correo || !password) {
+        return res.status(400).json({ error: "Correo y contraseña son obligatorios" });
+    }
+
+    try {
+        const pool = await sql.connect(dbConfig);
+
+        // Generar hash de la contraseña
+        SALT_ROUNDS = 10;
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        // Llamar al Stored Procedure
+        await pool.request()
+            .input('Correo', sql.NVarChar, correo)
+            .input('Password', sql.NVarChar, hashedPassword)
+            .execute('sp_CREATEUSER');
+
+        res.json({ message: "Usuario registrado exitosamente" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error registrando usuario" });
+    }
+});
+
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
