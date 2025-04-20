@@ -130,6 +130,17 @@ app.get('/api/Provd', async(res) =>{
     }
 });
 
+// Obtener Ensayo Clínico (GET)
+app.get('/api/EnsClc', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().execute('sp_GetEnsClc');  
+        res.json(result.recordset);  
+    } catch (err) {
+        res.status(500).send(err.message); 
+    }
+});
+
 // Insertar un Ensayo Clínico (POST)
 app.post('/api/EnsayoClinico', async (req, res) => {
     try {
