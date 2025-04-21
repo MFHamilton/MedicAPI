@@ -4,10 +4,11 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
+const dotenv = require('dotenv').config();
 
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -16,17 +17,18 @@ app.use(bodyParser.json());
 
 // Configuración de la conexión a SQL Server
 const sql = require('mssql');
-const dbConfig = {
-    user: 'sqladmin',
-    password: 'Medicamentos1',
-    server: 'medicamentos.database.windows.net',
-    database: 'MEDICAMENTOS',
-    options: {
-        encrypt: true,
-        trustServerCertificate: true,
-    },
-};
 
+const dbConfig = {
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_DATABASE,
+  options: {
+    encrypt: process.env.DB_ENCRYPT === 'true',
+    trustServerCertificate: process.env.DB_TRUST_CERT === 'true',
+  },
+};
+console.log('DB server:', dbConfig.server);
 // Obtener medicamentos con sus fases (GET)
 app.get('/api/MedEnsayo/:nombreMedicamento', async (req, res) => {
     try {
