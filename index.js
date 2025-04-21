@@ -566,111 +566,359 @@ app.post('/api/TipoMedicamento', async (req, res) => {
     }
 });
 
-// Actualizar estado de Ensayo Clínico (SET)
-app.post('/api/SetEnsayoClinicoEstado', async (req, res) => {
-    try {
-        const { idEnsayo, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idEnsayo', sql.Int, idEnsayo)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetEnsClcEST');
-        res.json({ Message: 'Ensayo Clínico estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+
+app.put('/api/EnsayoClinico/:id', async (req, res) => {
+  const {
+    id_med = null,
+    ens_fase,
+    ens_poblacion_objetivo,
+    ens_eficacia_observada,
+    ens_estado
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_ensayo',                   sql.Int,           req.params.id)
+      .input('id_med',                      sql.Int,           id_med)
+      .input('ens_fase',                    sql.NVarChar(50),  ens_fase)
+      .input('ens_poblacion_objetivo',      sql.NVarChar(100), ens_poblacion_objetivo)
+      .input('ens_eficacia_observada',      sql.Decimal(5,2),  ens_eficacia_observada)
+      .input('ens_estado',                  sql.Bit,           ens_estado)
+      .execute('sp_setEnsClc');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setEnsClc:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Entidad Reguladora (SET)
-app.post('/api/SetEntidadReguladoraEstado', async (req, res) => {
-    try {
-        const { idEntidad, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idEntidad', sql.Int, idEntidad)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetEntReguladoraEST');
-        res.json({ Message: 'Entidad Reguladora estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 2. Entidad Reguladora
+app.put('/api/EntidadReg/:id', async (req, res) => {
+  const { ent_nombre, ent_pais } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_entidadreguladora', sql.Int,           req.params.id)
+      .input('ent_nombre',           sql.NVarChar(150), ent_nombre)
+      .input('ent_pais',             sql.NVarChar(100), ent_pais)
+      .execute('sp_setEntReguladora');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setEntReguladora:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Inspector (SET)
-app.post('/api/SetInspectorEstado', async (req, res) => {
-    try {
-        const { idInspector, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idInspector', sql.Int, idInspector)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetInsEST');
-        res.json({ Message: 'Inspector estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 3. Evento – Ensayo (N:M)
+app.put('/api/EventoEnsayo/:id', async (req, res) => {
+  const { id_ensayo } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_evento', sql.Int, req.params.id)
+      .input('id_ensayo', sql.Int, id_ensayo)
+      .execute('sp_setEvtEns');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setEvtEns:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Lote (SET)
-app.post('/api/SetLoteEstado', async (req, res) => {
-    try {
-        const { idLote, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idLote', sql.Int, idLote)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetLotEST');
-        res.json({ Message: 'Lote estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 4. Eventos Adversos
+app.put('/api/EventosAdversos/:id', async (req, res) => {
+  const {
+    id_tipo_evento = null,
+    ev_fecha_reporte,
+    id_gravedad,
+    ev_resultado = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_evento',        sql.Int,          req.params.id)
+      .input('id_tipo_evento',   sql.Int,          id_tipo_evento)
+      .input('ev_fecha_reporte', sql.Date,         ev_fecha_reporte)
+      .input('id_gravedad',      sql.Int,          id_gravedad)
+      .input('ev_resultado',     sql.NVarChar(sql.MAX), ev_resultado)
+      .execute('sp_setEveAdv');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setEveAdv:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Medicamento (SET)
-app.post('/api/SetMedicamentoEstado', async (req, res) => {
-    try {
-        const { idMedicamento, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idMedicamento', sql.Int, idMedicamento)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetMedEST');
-        res.json({ Message: 'Medicamento estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 5. Gravedad
+app.put('/api/Gravedad/:id', async (req, res) => {
+  const { Nombre, Descripcion = null } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('ID_Gravedad', sql.Int,         req.params.id)
+      .input('Nombre',      sql.NVarChar(50), Nombre)
+      .input('Descripcion', sql.NVarChar(255), Descripcion)
+      .execute('sp_setGravedad');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setGravedad:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Proveedor (SET)
-app.post('/api/SetProveedorEstado', async (req, res) => {
-    try {
-        const { idProveedor, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idProveedor', sql.Int, idProveedor)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetProvEST');
-        res.json({ Message: 'Proveedor estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 6. Inspección
+app.put('/api/Inspeccion/:id', async (req, res) => {
+  const {
+    id_med            = null,
+    id_lote           = null,
+    id_proveedor      = null,
+    id_entidadreguladora = null,
+    ins_fecha,
+    ins_requisitos    = null,
+    ins_observaciones = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_inspeccion',         sql.Int,              req.params.id)
+      .input('id_med',                sql.Int,              id_med)
+      .input('id_lote',               sql.Int,              id_lote)
+      .input('id_proveedor',          sql.Int,              id_proveedor)
+      .input('id_entidadreguladora',  sql.Int,              id_entidadreguladora)
+      .input('ins_fecha',             sql.Date,             ins_fecha)
+      .input('ins_requisitos',        sql.NVarChar(sql.MAX), ins_requisitos)
+      .input('ins_observaciones',     sql.NVarChar(sql.MAX), ins_observaciones)
+      .execute('sp_setInspec');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setInspec:', err);
+    res.status(500).send(err.message);
+  }
 });
 
-// Actualizar estado de Tipo Medicamento (SET)
-app.post('/api/SetTipoMedicamentoEstado', async (req, res) => {
-    try {
-        const { idTipoMedicamento, nuevoEstado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('idTipoMedicamento', sql.Int, idTipoMedicamento)
-            .input('nuevoEstado', sql.Bit, nuevoEstado)
-            .execute('sp_SetTipoMedEST');
-        res.json({ Message: 'Tipo Medicamento estado updated successfully' });
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+// 7. Inspección – Inspectores
+app.put('/api/InspeccionInspectores/:id', async (req, res) => {
+  const { id_inspector } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_inspeccion', sql.Int, req.params.id)
+      .input('id_inspector',  sql.Int, id_inspector)
+      .execute('sp_setInspecInspectores');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setInspecInspectores:', err);
+    res.status(500).send(err.message);
+  }
 });
 
+// 8. Inspectores
+app.put('/api/Inspector/:id', async (req, res) => {
+  const {
+    id_entidadreguladora = null,
+    inspec_nombre,
+    inspec_apellido,
+    inspec_estado
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_inspector',          sql.Int,         req.params.id)
+      .input('id_entidadreguladora',  sql.Int,         id_entidadreguladora)
+      .input('inspec_nombre',         sql.NVarChar(100), inspec_nombre)
+      .input('inspec_apellido',       sql.NVarChar(100), inspec_apellido)
+      .input('inspec_estado',         sql.Bit,         inspec_estado)
+      .execute('sp_setInspector');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setInspector:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 9. Lote Medicamento
+app.put('/api/LoteMedicamento/:id', async (req, res) => {
+  const {
+    id_med                  = null,
+    lot_fecha_fabricacion,
+    lot_fecha_vencimiento,
+    lot_cantidad_producida,
+    lot_estado
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_lote',                sql.Int,  req.params.id)
+      .input('id_med',                 sql.Int,  id_med)
+      .input('lot_fecha_fabricacion',  sql.Date, lot_fecha_fabricacion)
+      .input('lot_fecha_vencimiento',  sql.Date, lot_fecha_vencimiento)
+      .input('lot_cantidad_producida', sql.Int,  lot_cantidad_producida)
+      .input('lot_estado',             sql.Bit,  lot_estado)
+      .execute('sp_setLotMed');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setLotMed:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 10. Nivel de Riesgo
+app.put('/api/MedNivelRiesgos/:id', async (req, res) => {
+  const { med_nivel_riesgos } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_med_riesgo',      sql.Int,      req.params.id)
+      .input('med_nivel_riesgos',  sql.VarChar(10), med_nivel_riesgos)
+      .execute('sp_setMedRiesgo');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setMedRiesgo:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 11. Medicamentos
+app.put('/api/Medicamentos/:id', async (req, res) => {
+  const {
+    id_proveedor       = null,
+    id_tipo_medicamento = null,
+    med_nombre,
+    med_descripcion    = null,
+    med_estado,
+    med_controlado,
+    id_med_riesgo      = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_med',                sql.Int,         req.params.id)
+      .input('id_proveedor',          sql.Int,         id_proveedor)
+      .input('id_tipo_medicamento',   sql.Int,         id_tipo_medicamento)
+      .input('med_nombre',            sql.NVarChar(100), med_nombre)
+      .input('med_descripcion',       sql.NVarChar(255), med_descripcion)
+      .input('med_estado',            sql.Bit,         med_estado)
+      .input('med_controlado',        sql.Bit,         med_controlado)
+      .input('id_med_riesgo',         sql.Int,         id_med_riesgo)
+      .execute('sp_setMed');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setMed:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 12. Medicamentos – Eventos
+app.put('/api/MedicamentosEvento/:id', async (req, res) => {
+  const { id_evento } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_medicamento', sql.Int, req.params.id)
+      .input('id_evento',      sql.Int, id_evento)
+      .execute('sp_setMedEvt');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setMedEvt:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 13. Proveedores
+app.put('/api/Proveedores/:id', async (req, res) => {
+  const {
+    pro_nombre,
+    pro_ubicacion    = null,
+    pro_historial    = null,
+    pro_estado
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_proveedor', sql.Int,           req.params.id)
+      .input('pro_nombre',   sql.NVarChar(100), pro_nombre)
+      .input('pro_ubicacion',sql.NVarChar(255), pro_ubicacion)
+      .input('pro_historial',sql.NVarChar(sql.MAX), pro_historial)
+      .input('pro_estado',   sql.Bit,           pro_estado)
+      .execute('sp_setProv');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setProv:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 14. Tipo de Evento
+app.put('/api/TipoEvento/:id', async (req, res) => {
+  const {
+    nombre_evento,
+    descripcion_evento = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_tipo_evento',   sql.Int,           req.params.id)
+      .input('nombre_evento',    sql.NVarChar(100), nombre_evento)
+      .input('descripcion_evento', sql.NVarChar(255), descripcion_evento)
+      .execute('sp_setTipoEvt');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setTipoEvt:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 15. Tipo de Medicamento
+app.put('/api/TipoMedicamento/:id', async (req, res) => {
+  const {
+    tipom_nombre,
+    tipom_descripcion = null,
+    tipom_estado
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('id_tipo_medicamento', sql.Int,           req.params.id)
+      .input('tipom_nombre',        sql.NVarChar(100), tipom_nombre)
+      .input('tipom_descripcion',   sql.NVarChar(255), tipom_descripcion)
+      .input('tipom_estado',        sql.Bit,           tipom_estado)
+      .execute('sp_setTipoMed');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setTipoMed:', err);
+    res.status(500).send(err.message);
+  }
+});
 
 
 app.post('/api/CreateUser', async (req, res) => {
