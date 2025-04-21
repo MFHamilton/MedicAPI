@@ -29,99 +29,251 @@ const dbConfig = {
   },
 };
 console.log('DB server:', dbConfig.server);
-// Obtener medicamentos con sus fases (GET)
-app.get('/api/MedEnsayo/:nombreMedicamento', async (req, res) => {
+
+//Obtener ensayos clnicos (GET)
+app.get('/api/EnsayoClinico', async (req, res) => {
     try {
-        // Obtiene el parámetro desde la URL
-        const { nombreMedicamento } = req.params;
-        console.log("Parámetro recibido:", nombreMedicamento);
-
-        // Conexión a la base de datos
-        const pool = await sql.connect(dbConfig);
-
-        // Ejecución del procedimiento almacenado con el parámetro
-        const result = await pool.request()
-            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
-            .execute('sp_GetEnsayosXMed');
-
-        res.json(result.recordset);
-
+      
+      const {
+        id_ensayo = null,
+        id_med = null,
+        med_nombre = null,
+        ens_fase = null,
+        ens_poblacion_objetivo = null,
+        ens_eficacia_observada = null,
+        ens_estado = null
+      } = req.query;
+  
+      
+      const pool = await sql.connect(dbConfig);
+      const result = await pool.request()
+        .input('id_ensayo',              sql.NVarChar(50),  id_ensayo)
+        .input('id_med',                 sql.NVarChar(50),  id_med)
+        .input('med_nombre',             sql.NVarChar(100), med_nombre)
+        .input('ens_fase',               sql.NVarChar(50),  ens_fase)
+        .input('ens_poblacion_objetivo', sql.NVarChar(100), ens_poblacion_objetivo)
+        .input('ens_eficacia_observada', sql.NVarChar(5),   ens_eficacia_observada)
+        .input('ens_estado',             sql.NVarChar(5),   ens_estado)
+        .execute('sp_GetEnsClc');
+  
+      res.json(result.recordset);
     } catch (err) {
-        console.error("Error en el servidor:", err.message);
-        res.status(500).send(err.message);
+      console.error('Error al ejecutar sp_GetEnsClc:', err);
+      res.status(500).send(err.message);
     }
-});
+  });
 
 
 // Obtener entidad reguladora (GET) 
-app.get('/api/EntidadReg', async(req, res) => {
-    try{
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetEntReguladora');
-        res.json(result.recordset);
-
-    }catch(err){
-        res.status(500).send(err.message);
-    }
-});
-
-// Obtener Evento Adversos por Medicamentos
-app.get('/api/EvenAdvMed/:nombreMedicamento', async (req, res) => {
+app.get('/api/EntidadReg', async (req, res) => {
     try {
-        const { nombreMedicamento } = req.params;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
-            .execute('sp_GetEvAdversXMed');
-        res.json(result.recordset);
+      // Extraemos los parámetros de la query string (si no vienen, quedan null)
+      const {
+        id_entidadreguladora = null,
+        ent_nombre             = null,
+        ent_pais               = null
+      } = req.query;
+  
+      // Conexión
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_entidadreguladora', sql.Int,               id_entidadreguladora)
+        .input('ent_nombre',             sql.NVarChar(150),   ent_nombre)
+        .input('ent_pais',               sql.NVarChar(100),   ent_pais)
+        .execute('sp_GetEntReguladora');
+  
+      // Devolvemos el recordset
+      res.json(result.recordset);
     } catch (err) {
-        res.status(500).send(err.message);
+      console.error('Error al ejecutar sp_GetEntReguladora:', err);
+      res.status(500).send(err.message);
     }
-});
+  });
 
-
-// Obtener inspector por entidad reguladora
-app.get('/api/InspcEntd/:nombreEntidad', async (req, res) => {
+// Obtener Evento Adversos 
+app.get('/api/EventosAdversos', async (req, res) => {
     try {
-        const { nombreEntidad } = req.params;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('nombreEntidad', sql.NVarChar(100), nombreEntidad)
-            .execute('sp_GetInsXEntReguladora');
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// Obtener medicamentos por inspeccion
-app.get('/api/MedInsp/:nombreMedicamento', async (req, res) => {
-    try {
-        const { nombreMedicamento } = req.params;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('nombreMedicamento', sql.NVarChar(100), nombreMedicamento)
-            .execute('sp_GetInsXMed');
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
-
-// Obtener medicamentos por lotes
-app.get('/api/LoteMed/:nombreMedicamento', async (req, res) => {
+        // Tomamos de la query todos los parámetros (null si no vienen)
+        const {
+          id_evento         = null,
+          tipo_evento       = null,
+          ev_fecha_reporte  = null,
+          gravedad          = null,
+          id_ensayo         = null,
+          med_nombre        = null,
+          ens_fase          = null
+        } = req.query;
     
-    try {
-        const { nombreMedicamento } = req.params;
+        // Conexión al pool
         const pool = await sql.connect(dbConfig);
+    
+        // Llamada al SP con los inputs tipados
         const result = await pool.request()
-            .input('nombreMedicamento', sql.NVarChar, nombreMedicamento)
-            .execute('sp_GetLotsXMed');
+          .input('id_evento',        sql.Int,            id_evento)
+          .input('tipo_evento',      sql.NVarChar(100),  tipo_evento)
+          .input('ev_fecha_reporte', sql.Date,           ev_fecha_reporte)
+          .input('gravedad',         sql.NVarChar(50),   gravedad)
+          .input('id_ensayo',        sql.Int,            id_ensayo)
+          .input('med_nombre',       sql.NVarChar(100),  med_nombre)
+          .input('ens_fase',         sql.NVarChar(50),   ens_fase)
+          .execute('sp_getEvtEns');
+    
+        // Devolvemos el recordset al cliente
         res.json(result.recordset);
-    } catch (err) {
+      } catch (err) {
+        console.error('Error al ejecutar sp_getEvtEns:', err);
         res.status(500).send(err.message);
+      }
+    });
+
+
+
+// Obtener Inspecciones
+app.get('/api/Inspeccion', async (req, res) => {
+    try {
+      // Extraemos los parámetros de la query (null si no vienen)
+      const {
+        id_inspeccion         = null,
+        med_nombre            = null,
+        lot_fecha_fabricacion = null,
+        lot_fecha_vencimiento = null,
+        lot_estado            = null,
+        ent_nombre            = null,
+        pro_nombre            = null,
+        ins_fecha             = null,
+        ins_requisitos        = null,
+        ins_observaciones     = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_inspeccion',         sql.Int,              id_inspeccion)
+        .input('med_nombre',            sql.NVarChar(100),    med_nombre)
+        .input('lot_fecha_fabricacion', sql.Date,             lot_fecha_fabricacion)
+        .input('lot_fecha_vencimiento', sql.Date,             lot_fecha_vencimiento)
+        .input('lot_estado',            sql.Bit,              lot_estado)
+        .input('ent_nombre',            sql.NVarChar(150),    ent_nombre)
+        .input('pro_nombre',            sql.NVarChar(100),    pro_nombre)
+        .input('ins_fecha',             sql.Date,             ins_fecha)
+        .input('ins_requisitos',        sql.NVarChar(sql.MAX), ins_requisitos)
+        .input('ins_observaciones',     sql.NVarChar(sql.MAX), ins_observaciones)
+        .execute('sp_getInspec');
+  
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_getInspec:', err);
+      res.status(500).send(err.message);
     }
+  });
+
+// Obtener inspectores 
+app.get('/api/Inspector', async (req, res) => {
+    try {
+      // Extraemos los parámetros de la query (si no vienen, quedan null)
+      const {
+        id_inspector     = null,
+        ent_nombre       = null,
+        inspec_nombre    = null,
+        inspec_apellido  = null,
+        inspec_estado    = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_inspector',    sql.Int,             id_inspector)
+        .input('ent_nombre',      sql.NVarChar(150),   ent_nombre)
+        .input('inspec_nombre',   sql.NVarChar(100),   inspec_nombre)
+        .input('inspec_apellido', sql.NVarChar(100),   inspec_apellido)
+        .input('inspec_estado',   sql.Bit,             inspec_estado)
+        .execute('sp_GetInspector');
+  
+      // Devolvemos los datos
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_GetInspector:', err);
+      res.status(500).send(err.message);
+    }
+  });
+  
+  app.get('/api/MedFiltered', async (req, res) => {
+  try {
+    // Extraemos los parámetros de la query string (quedan null si no vienen)
+    const {
+      id_med            = null,
+      pro_nombre        = null,
+      tipom_nombre      = null,
+      med_nombre        = null,
+      med_descripcion   = null,
+      med_estado        = null,
+      med_controlado    = null,
+      med_nivel_riesgos = null
+    } = req.query;
+
+    // Conexión al pool
+    const pool = await sql.connect(dbConfig);
+
+    // Llamada al SP con inputs tipados
+    const result = await pool.request()
+      .input('id_med',            sql.Int,              id_med)
+      .input('pro_nombre',        sql.NVarChar(100),    pro_nombre)
+      .input('tipom_nombre',      sql.NVarChar(100),    tipom_nombre)
+      .input('med_nombre',        sql.NVarChar(100),    med_nombre)
+      .input('med_descripcion',   sql.NVarChar(255),    med_descripcion)
+      .input('med_estado',        sql.Bit,              med_estado)
+      .input('med_controlado',    sql.Bit,              med_controlado)
+      .input('med_nivel_riesgos', sql.VarChar(10),      med_nivel_riesgos)
+      .execute('sp_GetMed');
+
+    // Devolvemos el resultado
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error al ejecutar sp_GetMed:', err);
+    res.status(500).send(err.message);
+  }
 });
+
+//Obtener lotes 
+app.get('/api/LoteMed', async (req, res) => {
+    try {
+      // Destructuramos los parámetros de la query (null si no vienen)
+      const {
+        id_lote                   = null,
+        med_nombre                = null,
+        lot_fecha_fabricacion     = null,
+        lot_fecha_vencimiento     = null,
+        lot_cantidad_producida    = null,
+        lot_estado                = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_lote',                sql.Int,            id_lote)
+        .input('med_nombre',             sql.NVarChar(100),  med_nombre)
+        .input('lot_fecha_fabricacion',  sql.Date,           lot_fecha_fabricacion)
+        .input('lot_fecha_vencimiento',  sql.Date,           lot_fecha_vencimiento)
+        .input('lot_cantidad_producida', sql.Int,            lot_cantidad_producida)
+        .input('lot_estado',             sql.Bit,            lot_estado)
+        .execute('sp_getLotMed');
+  
+      // Devolvemos el resultado al cliente
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_getLotMed:', err);
+      res.status(500).send(err.message);
+    }
+  });
+
 
 // Obtener medicamentos
 app.get('/api/Meds', async (req, res) => {
@@ -135,80 +287,177 @@ app.get('/api/Meds', async (req, res) => {
 });
 
 // Obtener proveedor de medicamentos
-app.get('/api/MedsProv/:nombreProveedor', async(req,res) =>{
-    try{
-        const {nombreProveedor} = req.params;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-        .input('nombreProveedor', sql.NVarChar, nombreProveedor)
-        .execute('sp_GetMedXProv');
-        res.json(result.recordset);
-    } catch(err){
-        res.status(500).send(err.message);
+app.get('/api/Meds', async (req, res) => {
+    try {
+      // Extraemos los parámetros de la query string (quedan null si no vienen)
+      const {
+        id_med            = null,
+        pro_nombre        = null,
+        tipom_nombre      = null,
+        med_nombre        = null,
+        med_descripcion   = null,
+        med_estado        = null,
+        med_controlado    = null,
+        med_nivel_riesgos = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_med',            sql.Int,              id_med)
+        .input('pro_nombre',        sql.NVarChar(100),    pro_nombre)
+        .input('tipom_nombre',      sql.NVarChar(100),    tipom_nombre)
+        .input('med_nombre',        sql.NVarChar(100),    med_nombre)
+        .input('med_descripcion',   sql.NVarChar(255),    med_descripcion)
+        .input('med_estado',        sql.Bit,              med_estado)
+        .input('med_controlado',    sql.Bit,              med_controlado)
+        .input('med_nivel_riesgos', sql.VarChar(10),      med_nivel_riesgos)
+        .execute('sp_GetMed');
+  
+      // Devolvemos el resultado
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_GetMed:', err);
+      res.status(500).send(err.message);
     }
-});
+  });
+
+  // Obtener medicamentos por eventos
+  app.get('/api/MedEvt', async (req, res) => {
+    try {
+      // Destructuramos los parámetros de la query (quedan null si no los envían)
+      const {
+        id_medicamento     = null,
+        med_nombre         = null,
+        id_evento          = null,
+        ev_fecha_reporte   = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_medicamento',   sql.Int,            id_medicamento)
+        .input('med_nombre',       sql.NVarChar(100),  med_nombre)
+        .input('id_evento',        sql.Int,            id_evento)
+        .input('ev_fecha_reporte', sql.Date,           ev_fecha_reporte)
+        .execute('sp_getMedEvt');
+  
+      // Enviamos el recordset al cliente
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_getMedEvt:', err);
+      res.status(500).send(err.message);
+    }
+  });
+//Obtener medicamentos por riesgo
+  app.get('/api/MedRiesgo', async (req, res) => {
+    try {
+      // Extraemos parámetros de la query (null si no vienen)
+      const {
+        id_med_riesgo       = null,
+        med_nivel_riesgos   = null
+      } = req.query;
+  
+      // Conexión al pool
+      const pool = await sql.connect(dbConfig);
+  
+      // Llamada al SP con inputs tipados
+      const result = await pool.request()
+        .input('id_med_riesgo',    sql.Int,           id_med_riesgo)
+        .input('med_nivel_riesgos', sql.VarChar(10), med_nivel_riesgos)
+        .execute('sp_getMedRiesgo');
+  
+      // Devolvemos el recordset
+      res.json(result.recordset);
+    } catch (err) {
+      console.error('Error al ejecutar sp_getMedRiesgo:', err);
+      res.status(500).send(err.message);
+    }
+  });
+  
 
 // Obtener listado de proveedores
-app.get('/api/Provd', async(req,res) =>{
-    try{
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().execute('sp_GetProv');
-        res.json(result.recordset);
-    } catch(err){
-        res.status(500).send(err.message);
-    }
-});
-
-// Insertar Ensayo Clínico (POST)
-app.post('/api/EnsayoClinico', async (req, res) => {
+app.get('/api/Provd', async (req, res) => {
     try {
-        const { id_med, ens_fase, ens_poblacion_objetivo, ens_eficacia_observada, ens_estado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('id_med', sql.Int, id_med)
-            .input('ens_fase', sql.NVarChar, ens_fase)
-            .input('ens_poblacion_objetivo', sql.NVarChar, ens_poblacion_objetivo)
-            .input('ens_eficacia_observada', sql.Decimal(5, 2), ens_eficacia_observada)
-            .input('ens_estado', sql.Bit, ens_estado)
-            .execute('sp_PostEnsClc');
-        res.json({ Message: 'Ensayo Clínico inserted successfully' });
+      const {
+        id_proveedor   = null,
+        pro_nombre     = null,
+        pro_ubicacion  = null,
+        pro_historial  = null,
+        pro_estado     = null
+      } = req.query;
+  
+      const pool = await sql.connect(dbConfig);
+      const result = await pool.request()
+        .input('id_proveedor',  sql.Int,             id_proveedor)
+        .input('pro_nombre',    sql.NVarChar(100),   pro_nombre)
+        .input('pro_ubicacion', sql.NVarChar(255),   pro_ubicacion)
+        .input('pro_historial', sql.NVarChar(sql.MAX), pro_historial)
+        .input('pro_estado',    sql.Bit,             pro_estado)
+        .execute('sp_getProv');
+  
+      res.json(result.recordset);
     } catch (err) {
-        res.status(500).send(err.message);
+      console.error('Error al ejecutar sp_getProv:', err);
+      res.status(500).send(err.message);
     }
-});
-
-// Insertar Entidad Reguladora (POST)
-app.post('/api/EntidadReguladora', async (req, res) => {
+  });
+  
+  //
+  // Tipos de Evento
+  //
+  app.get('/api/TipoEvento', async (req, res) => {
     try {
-        const { ent_nombre, ent_pais, ent_estado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('ent_nombre', sql.NVarChar, ent_nombre)
-            .input('ent_pais', sql.NVarChar, ent_pais)
-            .input('ent_estado', sql.Bit, ent_estado)
-            .execute('sp_PostEnt');
-        res.json({ Message: 'Entidad Reguladora inserted successfully' });
+      const {
+        id_tipo_evento     = null,
+        nombre_evento      = null,
+        descripcion_evento = null
+      } = req.query;
+  
+      const pool = await sql.connect(dbConfig);
+      const result = await pool.request()
+        .input('id_tipo_evento',     sql.Int,           id_tipo_evento)
+        .input('nombre_evento',      sql.NVarChar(100), nombre_evento)
+        .input('descripcion_evento', sql.NVarChar(255), descripcion_evento)
+        .execute('sp_getTipoEvt');
+  
+      res.json(result.recordset);
     } catch (err) {
-        res.status(500).send(err.message);
+      console.error('Error al ejecutar sp_getTipoEvt:', err);
+      res.status(500).send(err.message);
     }
-});
-
-// Insertar Evento Adverso (POST)
-app.post('/api/EventosAdversos', async (req, res) => {
+  });
+  
+  //
+  // Tipos de Medicamento
+  //
+  app.get('/api/TipoMedicamento', async (req, res) => {
     try {
-        const { id_tipo_evento, ev_fecha_reporte, id_gravedad, ev_resultado } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request()
-            .input('id_tipo_evento', sql.Int, id_tipo_evento)
-            .input('ev_fecha_reporte', sql.Date, ev_fecha_reporte)
-            .input('id_gravedad', sql.Int, id_gravedad)
-            .input('ev_resultado', sql.Text, ev_resultado)
-            .execute('sp_PostEvenAd');
-        res.json({ Message: 'Evento Adverso inserted successfully' });
+      const {
+        id_tipo_medicamento   = null,
+        tipom_nombre          = null,
+        tipom_descripcion     = null,
+        tipom_estado          = null
+      } = req.query;
+  
+      const pool = await sql.connect(dbConfig);
+      const result = await pool.request()
+        .input('id_tipo_medicamento', sql.Int,           id_tipo_medicamento)
+        .input('tipom_nombre',        sql.NVarChar(100), tipom_nombre)
+        .input('tipom_descripcion',   sql.NVarChar(255), tipom_descripcion)
+        .input('tipom_estado',        sql.Bit,           tipom_estado)
+        .execute('sp_getTipoMed');
+  
+      res.json(result.recordset);
     } catch (err) {
-        res.status(500).send(err.message);
+      console.error('Error al ejecutar sp_getTipoMed:', err);
+      res.status(500).send(err.message);
     }
-});
+  });
 
 // Insertar Inspección (POST)
 app.post('/api/Inspeccion', async (req, res) => {
