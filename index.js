@@ -18,8 +18,8 @@ app.use(bodyParser.json());
 const sql = require('mssql');
 const dbConfig = {
     user: 'sqladmin',
-    password: 'Admin123',
-    server: '34.136.224.59',
+    password: 'Medicamentos1',
+    server: 'medicamentos.database.windows.net',
     database: 'MEDICAMENTOS',
     options: {
         encrypt: true,
