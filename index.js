@@ -920,6 +920,70 @@ app.put('/api/TipoMedicamento/:id', async (req, res) => {
   }
 });
 
+// 18. Update Postcomercialización
+app.put('/api/Postcomercializacion/:id', async (req, res) => {
+  const {
+    id_med            = null,
+    ID_Lote           = null,
+    ID_Evento         = null,
+    ID_Inspeccion     = null,
+    Fecha             = null,
+    Observaciones     = null,
+    Estado            = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    await pool.request()
+      .input('ID_Postcomercializacion', sql.Int,            req.params.id)
+      .input('id_med',                  sql.Int,            id_med)
+      .input('ID_Lote',                 sql.Int,            ID_Lote)
+      .input('ID_Evento',               sql.Int,            ID_Evento)
+      .input('ID_Inspeccion',           sql.Int,            ID_Inspeccion)
+      .input('Fecha',                   sql.Date,           Fecha)
+      .input('Observaciones',           sql.NVarChar(sql.MAX), Observaciones)
+      .input('Estado',                  sql.NVarChar(50),   Estado)
+      .execute('sp_setPostcomercializacion');
+
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error sp_setPostcomercializacion:', err);
+    res.status(500).send(err.message);
+  }
+});
+
+// 19. Create Postcomercialización
+app.post('/api/Postcomercializacion', async (req, res) => {
+  const {
+    id_med            = null,
+    ID_Lote           = null,
+    ID_Evento         = null,
+    ID_Inspeccion     = null,
+    Fecha             = null,
+    Observaciones     = null,
+    Estado            = null
+  } = req.body;
+
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('id_med',                  sql.Int,            id_med)
+      .input('ID_Lote',                 sql.Int,            ID_Lote)
+      .input('ID_Evento',               sql.Int,            ID_Evento)
+      .input('ID_Inspeccion',           sql.Int,            ID_Inspeccion)
+      .input('Fecha',                   sql.Date,           Fecha)
+      .input('Observaciones',           sql.NVarChar(sql.MAX), Observaciones)
+      .input('Estado',                  sql.NVarChar(50),   Estado)
+      .execute('sp_PostPostcomercializacion');
+
+    // devuelve el nuevo ID
+    const newId = result.recordset[0]?.NewID_Postcomercializacion;
+    res.status(201).json({ ID_Postcomercializacion: newId });
+  } catch (err) {
+    console.error('Error sp_PostPostcomercializacion:', err);
+    res.status(500).send(err.message);
+  }
+});
 
 app.post('/api/CreateUser', async (req, res) => {
     const { correo, password } = req.body;
