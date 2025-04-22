@@ -951,6 +951,8 @@ app.post('/api/CreateUser', async (req, res) => {
 app.post('/api/Login', async (req, res) => {
     const { correo, password } = req.body;
 
+    
+    
     if (!correo || !password) {
         return res.status(400).json({ error: "Correo y contraseña son obligatorios" });
     }
